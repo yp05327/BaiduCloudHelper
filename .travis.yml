@@ -5,6 +5,7 @@ python:
     - "3.5"
     - "3.6"
 install:
+    - pip install -q Pillow --use-mirrors
     - pip install -q -e . --use-mirrors
 script:
     - python baidu_pcs.py

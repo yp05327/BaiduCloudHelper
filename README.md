@@ -17,14 +17,17 @@ python3.2
 python3.3  
 python3.4  
 python3.5  
-python3.6``` 
+python3.6
+``` 
   
-```pip install -r requirements.txt``` 
+```pip install -r requirements.txt
+``` 
   
 Linux、Mac非root需要添加sudo
 
 # 使用
-```python main.py```
+```python main.py
+```
 
 # 目前支持功能
 1.登陆、退出

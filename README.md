@@ -8,9 +8,7 @@
 百度网盘下载工具,目前开发中，主要开发环境为python2.7，如遇到build未pass请况，会优先支持python2.7
 
 # 安装
-运行环境需要python，安装第三方库使用pip  
-  
-支持的python版本：  
+运行环境需要python，目前支持的python版本：  
   
 ```python2.7  
 python3.2  
@@ -20,10 +18,10 @@ python3.5
 python3.6
 ``` 
   
+安装依赖库，使用pip，Linux、Mac非root需要添加sudo  
+  
 ```pip install -r requirements.txt
 ``` 
-  
-Linux、Mac非root需要添加sudo
 
 # 使用
 ```python main.py

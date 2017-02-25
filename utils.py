@@ -2,9 +2,18 @@
 import time
 import re
 import zlib
-from gzip import GzipFile
-from StringIO import StringIO
 
+from gzip import GzipFile
+
+# 兼容2.7和3.x
+try:
+    from io import BytesIO as StringIO
+except ImportError:
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
+    
 '''
 百度云引擎工具模块
 '''
@@ -29,7 +38,7 @@ def get_json_from_response(response):
         正则结果的list
     '''
     
-    return re.findall('\({[\s\S]*?}\)', response)
+    return re.findall('\(({[\s\S]*?})\)', response)
 
 def deflate_decode(data): 
     '''
@@ -59,3 +68,6 @@ def gzip_decode(data) :
     buf = StringIO(data)
     f = GzipFile(fileobj=buf)
     return f.read() 
+
+def show_msg(msg):
+    print(msg)

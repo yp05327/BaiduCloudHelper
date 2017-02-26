@@ -90,3 +90,4 @@ ENV/
 .pydevproject
 .project
 org.eclipse.core.resources.prefs
+org.eclipse.wst.xsl.core.prefs

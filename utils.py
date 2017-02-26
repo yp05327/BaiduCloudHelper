@@ -4,6 +4,7 @@ import re
 import zlib
 
 from gzip import GzipFile
+from PIL import Image
 
 # 兼容2.7和3.x
 try:
@@ -13,7 +14,7 @@ except ImportError:
         from cStringIO import StringIO
     except ImportError:
         from StringIO import StringIO
-    
+
 '''
 百度云引擎工具模块
 '''
@@ -69,5 +70,14 @@ def gzip_decode(data) :
     f = GzipFile(fileobj=buf)
     return f.read() 
 
-def show_msg(msg):
+def show_verifycode_img(img, window=None):
+    if window:
+        return window.show_verifycode_img(img)
+    else:
+        img.show()
+
+def show_msg(msg, window=None):
+    if window:
+        window.show_msg(msg)
+        
     print(msg)

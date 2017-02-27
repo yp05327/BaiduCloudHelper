@@ -53,29 +53,7 @@ class DownloadTask:
         '''
         
     def save_task_info(self):
-        cookies = []
-        for cookie in self.cookies:
-            cookies.append({
-                    'version': cookie.version,
-                    'name': cookie.name,
-                    'value': cookie.value,
-                    'port': cookie.port,
-                    'port_specified': cookie.port_specified,
-                    'domain': cookie.domain,
-                    'domain_specified': cookie.domain_specified,
-                    'path': cookie.path,
-                    'path_specified': cookie.path_specified,
-                    'secure': cookie.secure,
-                    'expires': cookie.expires,
-                    'discard': cookie.discard,
-                    'comment': cookie.comment,
-                    'comment_url': cookie.comment_url,
-                    'rest': cookie._rest,
-                    'rfc2109': cookie.rfc2109
-                })
-            
         info = {
-            'cookies': cookies,
             'headers': self.headers,
             'url': self.url,
             'size': self.size,
@@ -102,29 +80,7 @@ class DownloadTask:
             info = eval(fd.read())
             fd.close()
             
-            cookies = cookielib.CookieJar()
-            for cookie in info['cookies']:
-                cookies.set_cookie(cookielib.Cookie(
-                        version=cookie['version'],
-                        name=cookie['name'],
-                        value=cookie['value'],
-                        port=cookie['port'],
-                        port_specified=cookie['port_specified'],
-                        domain=cookie['domain'],
-                        domain_specified=cookie['domain_specified'],
-                        domain_initial_dot=False,
-                        path=cookie['path'],
-                        path_specified=cookie['path_specified'],
-                        secure=cookie['secure'],
-                        expires=cookie['expires'],
-                        discard=cookie['discard'],
-                        comment=cookie['comment'],
-                        comment_url=cookie['comment_url'],
-                        rest=cookie['rest'],
-                        rfc2109=cookie['rfc2109']
-                    ))
-            self.cookies = cookies
-            self.headers,
+            self.headers = info['headers']
             self.url = info['url']
             self.size = info['size']
             self.save_file = info['save_file']
@@ -142,11 +98,6 @@ class DownloadTask:
     def create_tmp_file(self):
         try:
             fd = open(self.save_file + '.tmp','wb')
-            tmp = chr(1)
-            for i in xrange(self.size - 1):
-                tmp += chr(1)
-                
-            fd.write(tmp)
             fd.close()
             
             return True
@@ -178,7 +129,7 @@ class DownloadTask:
 task_list = []
 window = None
 # 每个区块大小
-delta_range = 1024 * 1024 * 10
+delta_range = 1024 * 1024
 
 def download(task, range):
     # 设置 cookie
@@ -261,8 +212,6 @@ def start_task(id):
         utils.show_msg(traceback.print_exc())
         return -1
     
-    cookies = list(task.cookies)
-    
     download_args = []
     args = []
     for range in task.ranges:
@@ -270,9 +219,12 @@ def start_task(id):
         args.append((download_args, None))
     
     pool = ThreadPool(task.thread_num)  
-    requests = makeRequests(download, args)  
+    requests = makeRequests(download, args) 
+     
     for req in requests:
         pool.putRequest(req)
+        
+    utils.show_msg('Start downloading')
     pool.wait()
     
     # 下载完成，删除配置文件，并修改文件名

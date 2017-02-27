@@ -8,17 +8,19 @@ import sys
 
 username = ''
 password = ''
+disk_file = ''
+download_file = ''
 
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 #user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 
 def test(bdce):
-    url = bdce.get_download_url('/leanote-desktop-mac-v2.2.3.zip')
+    url = bdce.get_download_url(disk_file)
     size = bdce.get_file_size(url)
     
     if not size:
         return 0
-    task_id = downloadengine.add_task(bdce, url, size, '/Users/eddieyang/Documents/workspace/baiducloudhelper/test.zip')
+    task_id = downloadengine.add_task(bdce, url, size, download_file)
     
     if task_id != -1 | task_id != False:
         downloadengine.start_task(task_id)

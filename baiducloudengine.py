@@ -216,7 +216,12 @@ class BaiduCloudEngine():
                     captch = utils.show_verifycode_img(verifycode_img, self.__window)
                 else:
                     utils.show_verifycode_img(verifycode_img)
-                    captch = raw_input("Enter verifycode：")
+                    
+                    # 兼容3.x
+                    try:
+                        captch = raw_input("Enter verifycode：")
+                    except NameError:
+                        captch = input("Enter verifycode：")
                     
                 verifycode_img.close()
             else:

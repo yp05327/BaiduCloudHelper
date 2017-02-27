@@ -139,7 +139,8 @@ class BaiduCloudEngine():
                     0为失败，None为发生错误
         '''
         
-        self.get_response(home_url)
+        if self.get_response(home_url) == '':
+            return False
         
         codestring = None
         
@@ -157,7 +158,7 @@ class BaiduCloudEngine():
         except Exception:
             utils.show_msg('错误：Can\'t get passport getapi\'s response json.', self.__window)
             utils.show_msg(traceback.print_exc())
-            return 0
+            return False
         
         # logincheck
         passport_logincheck_url = passport_url + 'logincheck&&token=%s' % self.__token
@@ -175,7 +176,7 @@ class BaiduCloudEngine():
         except Exception:
             utils.show_msg('错误:Can\'t get passport logincheck\'s response json.', self.__window)
             utils.show_msg(traceback.print_exc())
-            return 0
+            return False
         
         return codeString
         
@@ -246,6 +247,7 @@ class BaiduCloudEngine():
                         "ppui_logintime": "2602",
                         "callback": "parent.bd__pcbs__msdlhs"
                         }
+
             passport_logincheck_response = self.get_response(passport_url + 'login', post_data)
             
             try:
@@ -282,6 +284,7 @@ class BaiduCloudEngine():
                 # 访问一次跳转地址和首页
                 self.get_response(jump_url)
                 self.get_response(disk_home_url)
+                
                 return True
             
             elif errno == '120019' or errno == '120021':

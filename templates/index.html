@@ -1,0 +1,65 @@
+
+{% extends 'base.html' %}
+ 
+{% block title %}
+百度云下载工具
+{% endblock %}
+ 
+{% block content %}
+	<div class="jumbotron">
+		<div class="container">
+			<h2>欢迎使用</h2>
+
+			<div class="container" style="text-align:center;width:300px;">
+				<h4>登录</h4>
+
+				<div class="input-group">
+					<span class="input-group-addon glyphicon glyphicon-user" aria-hidden=true></span>
+					<input type="text" class="form-control" id="username" placeholder="用户名" aria-describedby="basic-addon1">
+				</div>
+				<br />
+				<div class="input-group">
+					<span class="input-group-addon glyphicon glyphicon-asterisk" aria-hidden=true></span>
+					<input type="password" class="form-control" id="password" placeholder="密码" aria-describedby="basic-addon1">
+				</div>
+				<br />
+				<img id="verify_img" style="display:none">
+				<input type="text" style="display:none" class="form-control" id="verify" placeholder="验证码" aria-describedby="basic-addon1">
+				<br />
+				<div>
+					<button type="submit" class="btn btn-default" onclick="javascript:login();">登录</button>
+					<button type="reset" class="btn btn-default">重置</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	
+	
+{% endblock %}
+
+{% block js %}
+	<script>
+	function login(){
+		$.ajax({
+			type: "POST",
+			url: '/login',
+			datatype: "json",
+			data: {
+				username: $("#username").val(),
+				password: $("#password").val(),
+				verify: $("#verify").val(),
+			},
+			success: function(result) {
+				if (result.success == 1) {
+					window.location.reload();
+				}else if(result.success == -1){
+					document.getElementById('verify_img').src = result.verifycode_img_url;
+				    $("#verify_img").show();
+				    $("#verify").show();
+				}
+			}
+		});
+    }
+	</script>
+{% endblock %}

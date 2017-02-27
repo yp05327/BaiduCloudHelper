@@ -43,7 +43,7 @@ pcs_rest_url = 'http://c.pcs.baidu.com/rest/2.0/pcs/file'
 max_retry_times = 10
 
 class BaiduCloudEngine():
-    def __init__(self, window=None, user_agent='Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'):
+    def __init__(self, webserver=False, user_agent='Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'):
         '''
         初始化百度云引擎
         
@@ -56,8 +56,8 @@ class BaiduCloudEngine():
             window：当前WindowEngine句柄，默认为None
             user_agent:默认为win10 chrome
         '''
-        
-        self.__window = window
+
+        self.__webserver = webserver
         self.__cj = cookielib.CookieJar() 
         self.__opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.__cj))
         self.__headers = { 'Accept':'*/*',
@@ -65,7 +65,12 @@ class BaiduCloudEngine():
                     'Accept-Language':'zh-CN,zh;q=0.8',
                     'User-Agent': user_agent
         }
-    
+
+        # 用于网页模式
+        self.verifycode = ''
+        self.verifycode_img_url = None
+        self.logined = False
+
     def get_cookies(self):
         return self.__cj
     
@@ -107,9 +112,9 @@ class BaiduCloudEngine():
         
         if tryed_time > 3:
             if post_data is not None:
-                utils.show_msg('错误：Post url %s failed.' % url, self.__window)
+                utils.show_msg('错误：Post url %s failed.' % url)
             else:
-                utils.show_msg('错误：Open url %s failed.' % url, self.__window)
+                utils.show_msg('错误：Open url %s failed.' % url)
                 
             utils.show_msg(traceback.print_exc())
             return ''
@@ -156,7 +161,7 @@ class BaiduCloudEngine():
             self.__token = json['data']['token']
             codeString = json['data']['codeString']
         except Exception:
-            utils.show_msg('错误：Can\'t get passport getapi\'s response json.', self.__window)
+            utils.show_msg('错误：Can\'t get passport getapi\'s response json.')
             utils.show_msg(traceback.print_exc())
             return False
         
@@ -174,7 +179,7 @@ class BaiduCloudEngine():
             codeString = json['data']['codeString']
             
         except Exception:
-            utils.show_msg('错误:Can\'t get passport logincheck\'s response json.', self.__window)
+            utils.show_msg('错误:Can\'t get passport logincheck\'s response json.')
             utils.show_msg(traceback.print_exc())
             return False
         
@@ -196,36 +201,43 @@ class BaiduCloudEngine():
         retry = 0
         
         while retry <= max_retry_times:
-            codestring = self.check_login(username)
-        
-            if codestring == 0:
-                return False
-            
-            if codestring is None:
-                utils.show_msg('错误:codestring is None.', self.__window)
-                return False
-        
-            if codestring != '':
-                # 验证码
-                verifycode_img_url = captcha_url + codestring;
-                verifycode_img_response = self.get_response(verifycode_img_url, html=False)
-                verifycode_img_bytes = io.BytesIO(verifycode_img_response)
-                verifycode_img = Image.open(verifycode_img_bytes)
-                
-                if self.__window:
-                    captch = utils.show_verifycode_img(verifycode_img, self.__window)
-                else:
-                    utils.show_verifycode_img(verifycode_img)
-                    
-                    # 兼容3.x
-                    try:
-                        captch = raw_input("Enter verifycode：")
-                    except NameError:
-                        captch = input("Enter verifycode：")
-                    
-                verifycode_img.close()
+            if self.verifycode_img_url and self.verifycode != 'default':
+                captch = self.verifycode
+                self.verifycode_img_url = None
+                self.verifycode = ''
             else:
-                captch = ''
+                codestring = self.check_login(username)
+
+                if codestring == 0:
+                    return False
+
+                if codestring is None:
+                    utils.show_msg('错误:codestring is None.')
+                    return False
+
+                if codestring != '':
+                    # 验证码
+                    verifycode_img_url = captcha_url + codestring
+
+                    if self.__webserver:
+                        self.verifycode_img_url = verifycode_img_url
+                        self.verifycode = 'default'
+                        return False
+                    else:
+                        verifycode_img_response = self.get_response(verifycode_img_url, html=False)
+                        verifycode_img_bytes = io.BytesIO(verifycode_img_response)
+                        verifycode_img = Image.open(verifycode_img_bytes)
+                        utils.show_verifycode_img(verifycode_img)
+
+                        # 兼容3.x
+                        try:
+                            captch = raw_input("Enter verifycode：")
+                        except NameError:
+                            captch = input("Enter verifycode：")
+
+                    verifycode_img.close()
+                else:
+                    captch = ''
                 
             post_data = {"staticpage": "http://pan.baidu.com/res/static/thirdparty/pass_v3_jump.html",
                         "charset": "utf-8",
@@ -267,7 +279,7 @@ class BaiduCloudEngine():
                 jump_url += account
                 
             except Exception:
-                utils.show_msg('错误:Can\'t go to jump page.', self.__window)
+                utils.show_msg('错误:Can\'t go to jump page.')
                 utils.show_msg(traceback.print_exc())
                 return False
             
@@ -276,7 +288,7 @@ class BaiduCloudEngine():
                 tmp = re.findall('err_no=([-]?\d*)', jump_url)
                 errno = tmp[0]
             except Exception:
-                utils.show_msg('错误:Can\'t get check login error number.', self.__window)
+                utils.show_msg('错误:Can\'t get check login error number.')
                 utils.show_msg(traceback.print_exc())
                 return False
             
@@ -289,7 +301,9 @@ class BaiduCloudEngine():
                 # 访问一次跳转地址和首页
                 self.get_response(jump_url)
                 self.get_response(disk_home_url)
-                
+
+                self.logined = True
+
                 return True
             
             elif errno == '120019' or errno == '120021':
@@ -301,18 +315,18 @@ class BaiduCloudEngine():
                     gotourl = tmp[0]
                     
                 except Exception:
-                    utils.show_msg('错误:Can\'t get authtoken and gotourl.', self.__window)
+                    utils.show_msg('错误:Can\'t get authtoken and gotourl.')
                     utils.show_msg(traceback.print_exc())
                     return False
                 '''
                 此错误无法模拟，暂时不作处理
                 '''
-                utils.show_msg('错误：%s，目前由于此错误无法模拟，暂时不作处理，如知如何重现，请联系作者' % errno, self.__window)
+                utils.show_msg('错误：%s，目前由于此错误无法模拟，暂时不作处理，如知如何重现，请联系作者' % errno)
                 return False
             
-            utils.show_msg('错误:登陆错误，请重新尝试，错误代码：' + errno + '，错误信息：' + errmsg.get_login_errmsg(errno), self.__window)
+            utils.show_msg('错误:登陆错误，请重新尝试，错误代码：' + errno + '，错误信息：' + errmsg.get_login_errmsg(errno))
         
-        utils.show_msg('错误:超出最大重试次数：' + str(max_retry_times), self.__window)
+        utils.show_msg('错误:超出最大重试次数：' + str(max_retry_times))
         return False
         
     def logout(self):
@@ -358,12 +372,12 @@ class BaiduCloudEngine():
             if errno == '0':
                 return json['list']
         except Exception:
-            utils.show_msg("错误:Can't get pan api:" + api + " response json.", self.__window)
+            utils.show_msg("错误:Can't get pan api:" + api + " response json.")
             utils.show_msg(traceback.print_exc())
             return False
         
         # 错误处理
-        utils.show_msg('错误:执行百度云api：' + api + '时出错，错误代码：' + errno + '，错误信息：' + errmsg.get_errmsg_by_errno(errno), self.__window)
+        utils.show_msg('错误:执行百度云api：' + api + '时出错，错误代码：' + errno + '，错误信息：' + errmsg.get_errmsg_by_errno(errno))
         return False
     
     def get_list(self, dir, page=None, page_size=None, order='name', desc='1'):
@@ -425,7 +439,7 @@ class BaiduCloudEngine():
         try:
             response = self.__opener.open(req)
         except Exception:
-            utils.show_msg('错误：Get file size failed.url %s.' % url, self.__window)
+            utils.show_msg('错误：Get file size failed.url %s.' % url)
             utils.show_msg(traceback.print_exc())
             return False
 

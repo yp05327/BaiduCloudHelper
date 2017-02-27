@@ -1,7 +1,7 @@
 # coding=utf-8
 from baiducloudengine import BaiduCloudEngine
-from windowengine import WindowEngine
 
+import os
 import downloadengine
 import utils
 import sys
@@ -27,6 +27,10 @@ def test(bdce):
     
 def run(username, password):
     bdce = BaiduCloudEngine()
+    if username == '' or password == '':
+        utils.show_msg('请打开main.py修改相关信息')
+    return False
+
     if bdce.login(username, password):
         utils.show_msg('登录成功')
         test(bdce)
@@ -42,8 +46,7 @@ def run(username, password):
     
 def main(argv):
     if '-w' in argv:
-        # 初始化WindowEngine会自动初始化一个BaiduCloudEngine，全部工作交给WindowEngine处理
-        we = WindowEngine()
+        os.system('python ' + sys.path[0] + '/webserver.py')
     else:
         run(username, password)
     

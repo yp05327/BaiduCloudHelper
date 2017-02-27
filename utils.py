@@ -70,14 +70,15 @@ def gzip_decode(data) :
     f = GzipFile(fileobj=buf)
     return f.read() 
 
-def show_verifycode_img(img, window=None):
+def show_verifycode_img(img):
     if window:
         return window.show_verifycode_img(img)
     else:
         img.show()
 
-def show_msg(msg, window=None):
-    if window:
-        window.show_msg(msg)
+last_msg = ''
+def show_msg(msg):
+    global last_msg
+    last_msg = msg
         
     print(msg)

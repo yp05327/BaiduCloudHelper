@@ -1,0 +1,47 @@
+
+{% extends 'base.html' %}
+ 
+{% block title %}
+百度云下载工具
+{% endblock %}
+ 
+{% block content %}
+	<div class="container">
+		<h2>欢迎使用</h2>
+
+		<div class="container" style="text-align:center;width:300px;">
+			<h4>文件列表</h4>
+
+
+		</div>
+	</div>
+	
+	
+	
+{% endblock %}
+
+{% block js %}
+	<script>
+	function login(){
+		$.ajax({
+			type: "POST",
+			url: '/login',
+			datatype: "json",
+			data: {
+				username: $("#username").val(),
+				password: $("#password").val(),
+				verify: $("#verify").val(),
+			},
+			success: function(result) {
+				if (result.success == 1) {
+					window.location.reload();
+				}else if(result.success == -1){
+					document.getElementById('verify_img').src = result.verifycode_img_url;
+				    $("#verify_img").show();
+				    $("#verify").show();
+				}
+			}
+		});
+    }
+	</script>
+{% endblock %}

@@ -4,6 +4,7 @@ from windowengine import WindowEngine
 
 import downloadengine
 import utils
+import sys
 
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 #user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
@@ -34,10 +35,13 @@ def run(username, password):
         utils.show_msg('退出登录失败')
         return 0
 
-def main():
-    # 初始化WindowEngine会自动初始化一个BaiduCloudEngine，全部工作交给WindowEngine处理
-    we = WindowEngine()
+def main(argv):
+    if '-w' in argv:
+        # 初始化WindowEngine会自动初始化一个BaiduCloudEngine，全部工作交给WindowEngine处理
+        we = WindowEngine()
+    else:
+        run('','')
     
     
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

@@ -13,11 +13,20 @@
 		</ol>
 
 		<div class="container">
-			<h4>文件列表</h4>
-			<div id="file_list" class="list-group">
-				<!--  list  -->
-			</div>
-
+			<h4>文件下载</h4>
+			<p>文件名：{{ file_info['server_filename'] }}</p>
+			<p>大小：
+				{% if file_info['size'] < 1024 %}
+				{{ (file_info['size'] / 1024) | round(2) }} B
+				{% elif file_info['size'] < (1024 * 1024) %}
+				{{ (file_info['size'] / 1024) | round(2) }} KB
+				{% elif file_info['size'] < (1024 * 1024 * 1024) %}
+				{{ (file_info['size'] / (1024 * 1024)) | round(2) }} M
+				{% else %}
+				{{ (file_info['size'] / (1024 * 1024 * 1024)) | round(2) }} G
+				{% endif %}
+			</p>
+			<input type="button" class="btn btn-default" onclick="javascript:download();" value="下载">
 		</div>
 	</div>
 	
@@ -27,11 +36,12 @@
 
 {% block js %}
 	<script>
+	var file_href = "";
+
 	$(document).ready(function(){
 		{% autoescape false %}
 		var file = {{ file }};
 		{% endautoescape %}
-		var file_href = "";
 
 		if (file.length > 0){
 			for(var i=0;i<file.length;i++){
@@ -47,21 +57,21 @@
 				}
 			}
 		}
+    });
+    function download(){
 
-		$.ajax({
+    	$.ajax({
 			type: "POST",
-			url: '/disk',
+			url: '/download',
 			data: {
 				'file': file_href
 			},
 			success: function(result) {
 				if (result.success == 1) {
-					for(var i=0;i<result.file_list.length;i++){
-						$("#file_list").append("<a href=\"" + result.file_list[i].href + "\" class=\"list-group-item\">" + result.file_list[i].name + "</a>");
-					}
+
 				}
 			}
 		});
-    });
+    }
 	</script>
 {% endblock %}

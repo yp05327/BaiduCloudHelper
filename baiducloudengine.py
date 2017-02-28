@@ -66,6 +66,8 @@ class BaiduCloudEngine():
                     'User-Agent': user_agent
         }
 
+        self.file_list = {}
+
         # 用于网页模式
         self.verifycode = ''
         self.verifycode_img_url = None
@@ -294,7 +296,7 @@ class BaiduCloudEngine():
             
             if errno == '3' or errno == '6' or errno == '257' or errno == '200010':
                 # 验证码错误，需要重新输入
-                retry += 1
+                pass
                 
             elif errno == '0' or errno == '18' or errno == '400032' or errno == '400034' or errno == '400037' or errno == '400401':
                 # 登陆成功
@@ -325,7 +327,8 @@ class BaiduCloudEngine():
                 return False
             
             utils.show_msg('错误:登陆错误，请重新尝试，错误代码：' + errno + '，错误信息：' + errmsg.get_login_errmsg(errno))
-        
+            retry += 1
+
         utils.show_msg('错误:超出最大重试次数：' + str(max_retry_times))
         return False
         
@@ -401,7 +404,7 @@ class BaiduCloudEngine():
         
         args = {
             "_": utils.get_time(),
-            "dir": dir,
+            "dir": urllib.quote(dir),
             "order": order,
             "desc" : desc,
         }
@@ -410,11 +413,15 @@ class BaiduCloudEngine():
             args['page'] = page
         if page_size is not None:
             args['num'] = page_size
-        
+
         result = self.do_pan_api('list', args)
-        
-        if result:
-            return result
+
+        if result != False:
+            self.file_list[dir] = result
+
+        return result
+
+
         
     def get_download_url(self, dir):
         '''
@@ -447,4 +454,13 @@ class BaiduCloudEngine():
         size = int(re.match('bytes 0-4/(\d+)', content_range).group(1))
         
         return size
-    
+
+    def check_file(self, dir, file_name):
+        if self.file_list[dir] is None:
+            return False
+        else:
+            for file in self.file_list[dir]:
+                if file['server_filename'] == file_name:
+                    return file
+
+            return False

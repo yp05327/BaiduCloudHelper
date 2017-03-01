@@ -1,0 +1,143 @@
+
+{% extends 'base.html' %}
+ 
+{% block title %}
+百度云下载工具
+{% endblock %}
+ 
+{% block content %}
+	<br />
+	<div class="container">
+		<ol id="breadcrumb" class="breadcrumb">
+			<!--  breadcrumb  -->
+		</ol>
+
+		<div class="container">
+			<h4>下载任务</h4>
+			<div id="task_list" class="list-group">
+				<!--  task_list  -->
+			</div>
+		</div>
+	</div>
+	
+	
+	
+{% endblock %}
+
+{% block js %}
+	<script>
+	$(document).ready(function(){
+		{% autoescape false %}
+		var task = {{ task }};
+		{% endautoescape %}
+
+		if (task.length > 0){
+			for(var i=0;i<task.length;i++){
+				size = task[i].size;
+				file_size = size;
+				a = ['B', 'KB', 'M', 'G'];
+				for(var k=0;k<a.length;k++){
+					if (size < 1024){
+						size = size.toFixed(2) + ' ' + a[k];
+						break;
+					}else{
+						size = size / 1024;
+					}
+				}
+				$("#task_list").append("<a class=\"list-group-item\"><h4 class=\"list-group-item-heading\">文件名：" + task[i].name +
+									   "</h4>" + get_control_button(i, task[i].download_status) + "<p class=\"list-group-item-text\">大小： " + size +
+									   "<br>保存路径：" + task[i].save_file + "<br>区块：<br>" + show_ranges(i, task[i].ranges, file_size) + "</p></a>");
+			}
+		}else{
+			$("#task_list").append("<p>暂无任务</p>");
+		}
+    });
+
+	function get_control_button(id, download_status){
+		if (download_status == 0){
+			str = "<p id=\"download_success_" + id + "\"></p> <input id=\"download_btn_" + id+ "\"type=\"button\" value=\"下载\" class=\"btn btn-default\" onclick=\"javascript:start_task(" + id + ")\">";
+		}else if (download_status == 1){
+			str = "<p id=\"download_success_" + id + "\"></p>  <input id=\"download_btn_" + id+ "\"type=\"button\" value=\"暂停下载\" onclick=\"javascript:pause_task(" + id + ")\">";
+		}else if (download_status == 2){
+			str = "<p id=\"download_success_" + id + "\">下载完成</p>  <input id=\"download_btn_" + id+ "\"type=\"button\" value=\"删除任务\" onclick=\"javascript:delete_task(" + id + ")\">";
+		}
+
+		return str;
+	}
+
+    function show_ranges(id, ranges, size){
+		str = '';
+		for(var i=0;i<ranges.length;i++){
+			if (ranges[i][2] == 0){
+				str += "<button style=\"padding:7px 7px\" id=\"range_" + id + "_" + ranges[i][0] + "_" + ranges[i][1] +
+					   "\" disabled=\"disabled\" title=\"" + ranges[i][0] + "-" + ranges[i][1] + "\" class=\"btn btn-default\"></button>";
+			}else if (ranges[i][2] == 1){
+				str += "<button style=\"padding:7px 7px\" id=\"range_" + id + "_" + ranges[i][0] + "_" + ranges[i][1] +
+					   "\" disabled=\"disabled\" title=\"" + ranges[i][0] + "-" + ranges[i][1] + "\" class=\"btn btn-success\"></button>";
+			}
+		}
+
+		return str;
+	}
+
+	function start_task(id){
+		$('#download_btn_' + id).attr('disabled', 'disabled');
+		$.ajax({
+			type: "POST",
+			url: '/task',
+			data: {
+				'action': 'start',
+				'task_id': id
+			},
+			success: function(result) {
+				if (result.success == 1) {
+					$('#download_btn_' + id).attr('value', '暂停下载');
+					$('#download_btn_' + id).removeAttr('onclick');
+					$('#download_btn_' + id).attr('onclick', 'javascript:pause_task(' + id + ')');
+					$('#download_btn_' + id).removeAttr('disabled');
+				}
+			}
+		});
+	}
+
+	function pause_task(id){
+		$('#download_btn_' + id).attr('disabled', 'disabled');
+		$('#download_btn_' + id).attr('value', '暂停中');
+		$.ajax({
+			type: "POST",
+			url: '/task',
+			data: {
+				'action': 'pause',
+				'task_id': id
+			},
+			success: function(result) {
+				if (result.success == 1) {
+					$('#download_btn_' + id).attr('value', '下载');
+					$('#download_btn_' + id).removeAttr('onclick');
+					$('#download_btn_' + id).attr('onclick', 'javascript:start_task(' + id + ')');
+					$('#download_btn_' + id).removeAttr('disabled');
+				}
+			}
+		});
+	}
+
+	function delete_task(id){
+		$('#download_btn_' + id).attr('disabled', 'disabled');
+		$('#download_btn_' + id).attr('value', '删除中');
+		$.ajax({
+			type: "POST",
+			url: '/task',
+			data: {
+				'action': 'delete',
+				'task_id': id
+			},
+			success: function(result) {
+				if (result.success == 1) {
+					window.location.href = '/task';
+				}
+			}
+		});
+	}
+
+	</script>
+{% endblock %}

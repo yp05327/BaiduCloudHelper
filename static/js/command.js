@@ -9,5 +9,30 @@ function startListenServer() {
     es.onmessage = msg;
 }
 function msg(e) {
-    pushCommand.innerHTML = "状态：" + e.data;  // e.data即服务器返回的数据
+    json = $.parseJSON(e.data);
+    pushCommand.innerHTML = "状态：" + json.pushCommand;
+
+    try{
+        ranges = json.task_ranges;
+        for (var i=0;i<ranges.length;i++){
+            var successed = 0;
+            for (var k=0;k<ranges[i].length;k++){
+                if (ranges[i][k][2] == 0){
+                    $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).removeAttr('class');
+                    $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).attr('class', 'btn btn-default');
+                }else if (ranges[i][k][2] == 1){
+                    successed += 1;
+
+                    $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).removeAttr('class');
+                    $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).attr('class', 'btn btn-success');
+                }
+            }
+            if (successed == ranges[i].length){
+                $('#download_success_' + i).innerHTML = '下载完成';
+                $('#download_btn_' + i).attr('value', '删除任务');
+                $('#download_btn_' + i).removeAttr('onclick');
+				$('#download_btn_' + i).attr('onclick', 'javascript:delete_task(' + i + ')');
+            }
+        }
+    }catch(err){}
 }

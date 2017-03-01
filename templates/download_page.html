@@ -16,17 +16,41 @@
 			<h4>文件下载</h4>
 			<p>文件名：{{ file_info['server_filename'] }}</p>
 			<p>大小：
+				<!-- jinja2 2.9.x版本无法使用
+				{% set size = file_info['size'] %}
+				{% set a = ['B', 'KB', 'M', 'G'] %}
+				{% set k = a|length - 1%}
+
+				{% for i in range(a|length) %}
+					{% if size < 1024 %}
+						{% set k = i %}
+					{% else %}
+						{% set size = size / 1024 %}
+					{% endif %}
+				{% endfor %}
+
+				{{ size|string + ' ' + a[k] }}
+				-->
 				{% if file_info['size'] < 1024 %}
-				{{ (file_info['size'] / 1024) | round(2) }} B
-				{% elif file_info['size'] < (1024 * 1024) %}
-				{{ (file_info['size'] / 1024) | round(2) }} KB
-				{% elif file_info['size'] < (1024 * 1024 * 1024) %}
-				{{ (file_info['size'] / (1024 * 1024)) | round(2) }} M
+					{{ file_info['size'] }} B
+				{% elif file_info['size'] < 1024 * 1024 %}
+					{{ (file_info['size'] / 1024)|round(2) }} KB
+				{% elif file_info['size'] < 1024 * 1024 * 1024 %}
+					{{ (file_info['size'] / (1024 * 1024))|round(2) }} M
 				{% else %}
-				{{ (file_info['size'] / (1024 * 1024 * 1024)) | round(2) }} G
+					{{ (file_info['size'] / (1024 * 1024 * 1024))|round(2) }} G
 				{% endif %}
 			</p>
-			<input type="button" class="btn btn-default" onclick="javascript:download();" value="下载">
+			<div class="input-group">
+				<span class="input-group-addon glyphicon glyphicon-folder-open" aria-hidden=true></span>
+				<input type="text" class="form-control" id="save_file" placeholder="输入保存路径，留空表示在程序所在目录下下载" aria-describedby="basic-addon1">
+			</div>
+			</br>
+			为了避免和谐，普通情况建议使用直链下载：
+			<input type="button" class="btn btn-default" onclick="javascript:download(0)" value="直链下载">
+			</br>
+			如果直链无效可以点此：
+			<input type="button" class="btn btn-default" onclick="javascript:download(1)" value="下载">
 		</div>
 	</div>
 	
@@ -37,6 +61,7 @@
 {% block js %}
 	<script>
 	var file_href = "";
+	var file_name = "";
 
 	$(document).ready(function(){
 		{% autoescape false %}
@@ -45,8 +70,9 @@
 
 		if (file.length > 0){
 			for(var i=0;i<file.length;i++){
-				file_href += file[i];
+				file_href += '/' + file[i];
 				if (file_href == '/'){
+					file_href = '';
 					$("#breadcrumb").append("<li><a href=\"/disk\">首页</a></li>");
 				}else{
 					if (i == (file.length - 1)){
@@ -55,20 +81,41 @@
 						$("#breadcrumb").append("<li><a href=\"/disk?file=" + file_href + "\">" + file[i] + "</a></li>");
 					}
 				}
+				if (i == file.length - 1){
+					file_name = file[i];
+				}
 			}
 		}
     });
-    function download(){
-
+    function download(link){
     	$.ajax({
 			type: "POST",
-			url: '/download',
+			url: '/task',
 			data: {
-				'file': file_href
+				'action': 'add',
+				'file': file_href,
+				'name': file_name,
+				'save_file': $('#save_file').val(),
+				'link': link
 			},
 			success: function(result) {
 				if (result.success == 1) {
-
+					start_task(result.task_id);
+				}
+			}
+		});
+    }
+    function start_task(id){
+		$.ajax({
+			type: "POST",
+			url: '/task',
+			data: {
+				'action': 'start',
+				'task_id': id
+			},
+			success: function(result) {
+				if (result.success == 1) {
+					window.location.href = '/task';
 				}
 			}
 		});

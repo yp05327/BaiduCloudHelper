@@ -52,9 +52,8 @@ class BaiduCloudEngine():
         私有变量self.__opener为urllib2的opener
         私有变量self.__headers为自定义user-agent
         
-        Args:
-            window：当前WindowEngine句柄，默认为None
-            user_agent:默认为win10 chrome
+        :param window：当前WindowEngine句柄，默认为None
+        :param user_agent: 默认为win10 chrome
         '''
 
         self.__webserver = webserver
@@ -83,13 +82,11 @@ class BaiduCloudEngine():
         '''
         获取http返回内容
         
-        Args:
-            url:地址
-            post_data:post数据，默认为None
-            html:是否请求的是html数据
-            headers:可以自定义请求头
-        Returns:
-            http返回内容
+        :param url: 地址
+        :param post_data: post数据，默认为None
+        :param html: 是否请求的是html数据
+        :param headers: 可以自定义请求头
+        :returns: http返回内容，错误返回''
         '''
 
         if post_data is not None:
@@ -113,12 +110,13 @@ class BaiduCloudEngine():
                 utils.show_msg('Get url %s timeout, tryedtime=%d' % (url, tryed_time))
         
         if tryed_time > 3:
+            utils.show_msg(traceback.print_exc())
+
             if post_data is not None:
                 utils.show_msg('错误：Post url %s failed.' % url)
             else:
                 utils.show_msg('错误：Open url %s failed.' % url)
-                
-            utils.show_msg(traceback.print_exc())
+
             return ''
         
         content = response.read()
@@ -139,11 +137,9 @@ class BaiduCloudEngine():
         '''
         检查登陆信息，获取token和codestring
         
-        Args:
-            username:用户名
-        Returns:
-            result:正常返回值为string格式值为codestring
-                    0为失败，None为发生错误
+        :param username: 用户名
+        :returns: 正常返回值为string格式值为codestring
+                  0为失败，None为发生错误
         '''
         
         if self.get_response(home_url) == '':
@@ -163,8 +159,8 @@ class BaiduCloudEngine():
             self.__token = json['data']['token']
             codeString = json['data']['codeString']
         except Exception:
-            utils.show_msg('错误：Can\'t get passport getapi\'s response json.')
             utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误：Can\'t get passport getapi\'s response json.')
             return False
         
         # logincheck
@@ -181,8 +177,8 @@ class BaiduCloudEngine():
             codeString = json['data']['codeString']
             
         except Exception:
-            utils.show_msg('错误:Can\'t get passport logincheck\'s response json.')
             utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误:Can\'t get passport logincheck\'s response json.')
             return False
         
         return codeString
@@ -193,11 +189,9 @@ class BaiduCloudEngine():
         
         可能会弹出窗口输入验证码
         
-        Args:
-            username:用户名
-            password:密码
-        Returns:
-            result:True为成功，False为失败或发生错误
+        :param username: 用户名
+        :param password:密码
+        :returns: True为成功，False为失败或发生错误
         '''
         
         retry = 0
@@ -229,7 +223,7 @@ class BaiduCloudEngine():
                         verifycode_img_response = self.get_response(verifycode_img_url, html=False)
                         verifycode_img_bytes = io.BytesIO(verifycode_img_response)
                         verifycode_img = Image.open(verifycode_img_bytes)
-                        utils.show_verifycode_img(verifycode_img)
+                        verifycode_img.show()
 
                         # 兼容3.x
                         try:
@@ -281,8 +275,8 @@ class BaiduCloudEngine():
                 jump_url += account
                 
             except Exception:
-                utils.show_msg('错误:Can\'t go to jump page.')
                 utils.show_msg(traceback.print_exc())
+                utils.show_msg('错误:Can\'t go to jump page.')
                 return False
             
             # 错误处理
@@ -290,8 +284,8 @@ class BaiduCloudEngine():
                 tmp = re.findall('err_no=([-]?\d*)', jump_url)
                 errno = tmp[0]
             except Exception:
-                utils.show_msg('错误:Can\'t get check login error number.')
                 utils.show_msg(traceback.print_exc())
+                utils.show_msg('错误:Can\'t get check login error number.')
                 return False
             
             if errno == '3' or errno == '6' or errno == '257' or errno == '200010':
@@ -317,8 +311,8 @@ class BaiduCloudEngine():
                     gotourl = tmp[0]
                     
                 except Exception:
-                    utils.show_msg('错误:Can\'t get authtoken and gotourl.')
                     utils.show_msg(traceback.print_exc())
+                    utils.show_msg('错误:Can\'t get authtoken and gotourl.')
                     return False
                 '''
                 此错误无法模拟，暂时不作处理
@@ -336,8 +330,7 @@ class BaiduCloudEngine():
         '''
         退出登陆
         
-        Returns:
-            result:True为成功，False为失败或发生错误
+        :returns: True为成功，False为失败或发生错误
         '''
         
         passport_logout_response = self.get_response(logout_url)
@@ -351,11 +344,9 @@ class BaiduCloudEngine():
         '''
         执行百度网盘api
         
-        Args:
-            api:需要执行的api
-            args:string格式参数
-        Returns:
-            结果True or False
+        :param api: 需要执行的api
+        :param args: string格式参数
+        :returns: 结果True or False
         '''
         api_url = pan_api_url + api + '?'
         api_url += 'channel=chunlei&clienttype=0&web=1&t=%s' % utils.get_time()
@@ -375,8 +366,8 @@ class BaiduCloudEngine():
             if errno == '0':
                 return json['list']
         except Exception:
-            utils.show_msg("错误:Can't get pan api:" + api + " response json.")
             utils.show_msg(traceback.print_exc())
+            utils.show_msg("错误:Can't get pan api:" + api + " response json.")
             return False
         
         # 错误处理
@@ -389,17 +380,15 @@ class BaiduCloudEngine():
         
         注意输入必须全是string格式
         
-        Args:
-            dir：目录路径
-            page：第几页
-            page_size：每页几条记录，默认20
-            order:排序字段
-                  可选：time  修改时间
-                       name  文件名
-                       size  大小，注意目录无大小
-            desc：1为降序，0为升序，默认为降序
-        Returns:
-            dict格式文件信息
+        :param dir：目录路径
+        :param page：第几页
+        :param page_size：每页几条记录，默认20
+        :param order: 排序字段
+                      可选：time  修改时间
+                           name  文件名
+                           size  大小，注意目录无大小
+        :param desc：1为降序，0为升序，默认为降序
+        :returns: dict格式文件信息，server_filename和path为unicode编码，错误返回False
         '''
         
         args = {
@@ -417,27 +406,41 @@ class BaiduCloudEngine():
         result = self.do_pan_api('list', args)
 
         if result != False:
+            for file in result:
+                file['server_filename'] = eval('u\'' + file['server_filename'] + '\'')
+                file['path'] = eval('u\'' + file['path'] + '\'.replace(\'\\\\\',\'\')')
+
             self.file_list[dir] = result
 
         return result
-
-
         
-    def get_download_url(self, dir):
+    def get_download_url(self, dir, link):
         '''
         获取下载链接
         
-        Args:
-            dir：目录
-        Returns:
-            string格式下载链接
+        :param dir: 目录
+        :returns: string格式下载链接
         '''
-        
-        url = pcs_rest_url
-        url += '?method=%s&app_id=%s&path=%s' % ('download', '250528', urllib.quote(dir))
+
+        if link == 0:
+            '''
+            直链暂不支持
+
+            '''
+            url = pcs_rest_url
+            url += '?method=%s&app_id=%s&path=%s' % ('download', '250528', urllib.quote(dir))
+        else:
+            url = pcs_rest_url
+            url += '?method=%s&app_id=%s&path=%s' % ('download', '250528', urllib.quote(dir))
         return url
     
     def get_file_size(self, url):
+        '''
+        获取文件大小
+
+        :param url: 文件链接
+        :return: 文件大小，错误返回False
+        '''
         headers = {
             'Range': 'bytes=0-4'
         }
@@ -446,8 +449,8 @@ class BaiduCloudEngine():
         try:
             response = self.__opener.open(req)
         except Exception:
-            utils.show_msg('错误：Get file size failed.url %s.' % url)
             utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误：Get file size failed.url %s.' % url)
             return False
 
         content_range = response.headers['content-range']
@@ -456,11 +459,17 @@ class BaiduCloudEngine():
         return size
 
     def check_file(self, dir, file_name):
-        if self.file_list[dir] is None:
-            return False
-        else:
+        '''
+        检查在已缓存文件list中是否存在文件
+
+        :param dir: 路径，不包含文件名，结尾无/
+        :param file_name: 文件名
+        :return: json格式文件信息，server_filename和path为unicode编码，错误返回False
+        '''
+        try:
             for file in self.file_list[dir]:
                 if file['server_filename'] == file_name:
                     return file
-
+        except Exception:
+            utils.show_msg('错误：Check file failed.')
             return False

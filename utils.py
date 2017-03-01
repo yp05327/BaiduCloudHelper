@@ -68,13 +68,7 @@ def gzip_decode(data) :
     
     buf = StringIO(data)
     f = GzipFile(fileobj=buf)
-    return f.read() 
-
-def show_verifycode_img(img):
-    if window:
-        return window.show_verifycode_img(img)
-    else:
-        img.show()
+    return f.read()
 
 last_msg = ''
 def show_msg(msg):

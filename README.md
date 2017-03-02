@@ -9,7 +9,7 @@
 目前仅测试了Mac OS下的情况，Windows问题将会在开发完成后解决
 
 # 更新记录
-[点击此处](https://github.com/yp05327/BaiduCloudHelper/update.md)
+[点击此处](https://github.com/yp05327/BaiduCloudHelper/blob/master/update.md)
 
 # 注意事项
 * 每次开启都需要登陆，不会保存账号的cookies（目前测试情况，保存了之后，重新读取进行下载会出现403，所以保存了也没卵用）

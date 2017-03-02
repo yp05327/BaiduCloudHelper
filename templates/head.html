@@ -19,6 +19,9 @@
 
 				<ul class="nav navbar-nav navbar-right">
 					<p class="navbar-text" id="pushCommand" style="left:100px;width:350px">状态：</p>
+					{% if logined %}
+					<a class="navbar-text" href="/logout">退出</a>
+					{% endif %}
 				</ul>
 			</div>
 	 	</div>

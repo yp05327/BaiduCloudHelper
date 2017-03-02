@@ -34,7 +34,8 @@ def index():
     # 已登录检验
     if bdce.logined:
         return redirect('/disk', code=302)
-    return render_template('index.html')
+
+    return render_template('index.html', logined=bdce.logined)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -43,6 +44,7 @@ def login():
 
     username = request.form['username']
     password = request.form['password']
+    verify = request.form['verify']
 
     # 空值检验
     if username == '' or password == '':
@@ -52,13 +54,15 @@ def login():
     else:
         pushCommand = utils.last_msg
 
-    if bdce.login(username, password):
+    bdce.verifycode = verify.encode('utf-8')
+
+    if bdce.login(username, password, verify):
         pushCommand = '服务器运行中'
         res = {'success': 1}
         return Response(json.dumps(res), mimetype='application/json')
     else:
         # 出错
-        if bdce.verifycode_img_url is not None:
+        if bdce.verifycode_img_url != '':
             res = {'success': -1, 'error_msg': '请输入验证码', 'verifycode_img_url': bdce.verifycode_img_url}
             pushCommand = '请输入验证码'
             return Response(json.dumps(res), mimetype='application/json')
@@ -67,6 +71,13 @@ def login():
             res = {'success': 0, 'error_msg': 'See the console.'}
             return Response(json.dumps(res), mimetype='application/json')
 
+@app.route('/logout', methods=['GET'])
+def logout():
+    global bdce
+
+    bdce.logout()
+
+    return redirect('/', code=302)
 
 @app.route('/disk', methods=['GET', 'POST'])
 @required_login
@@ -85,7 +96,7 @@ def disk():
 
             return_file.insert(0, '')
 
-        return render_template('disk_home.html', file=json.dumps(return_file))
+        return render_template('disk_home.html', file=json.dumps(return_file), logined=bdce.logined)
     elif request.method == 'POST':
         request_file = request.form['file'].encode('utf-8')
 
@@ -147,7 +158,7 @@ def download():
     file = bdce.check_file(_file, name.decode('utf-8'))
 
     if file != False:
-        return render_template('download_page.html', file=json.dumps(return_file), download_file= download_file,file_info=file)
+        return render_template('download_page.html', file=json.dumps(return_file), download_file= download_file, file_info=file, logined=bdce.logined)
     else:
         pushCommand = utils.last_msg
         return redirect('/disk', code=302)
@@ -165,7 +176,7 @@ def task():
         for task in de.task_list:
             _task.append({'name': task.name, 'size': task.size, 'save_file': task.save_file, 'ranges': task.ranges, 'download_status': task.download_status})
 
-        return render_template('task.html', task=json.dumps(_task))
+        return render_template('task.html', task=json.dumps(_task), logined=bdce.logined)
 
     elif request.method == 'POST':
         action = request.form['action'].encode('utf-8')

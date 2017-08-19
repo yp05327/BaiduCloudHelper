@@ -454,10 +454,10 @@ class BaiduCloudEngine():
             return False
 
         try:
-            if not os.path.isfile('cookie.list'):
-                fd = open('cookie.list', "wb+")
-            else:
+            if os.path.isfile('cookie.list'):
                 fd = open('cookie.list', "rb+")
+            else:
+                return None
 
             cookie = fd.read()
             fd.close()

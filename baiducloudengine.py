@@ -43,7 +43,7 @@ logout_url = 'https://passport.baidu.com/?logout&u=https%3A%2F%2Fpan.baidu.com%2
 captcha_url = 'https://passport.baidu.com/cgi-bin/genimage?'
 pan_api_url = 'http://pan.baidu.com/api/'
 disk_home_url = 'https://pan.baidu.com/disk/home'
-pcs_rest_url = 'http://c.pcs.baidu.com/rest/2.0/pcs/file'
+pcs_rest_url = 'http://d.pcs.baidu.com/rest/2.0/pcs/file'
 get_publickey_url = 'https://passport.baidu.com/v2/getpublickey?token='
 
 max_retry_times = 10

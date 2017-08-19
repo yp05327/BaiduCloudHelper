@@ -39,18 +39,18 @@ web模式（开发中）：
 下载中退出程序，再次打开，未下载完的任务会显示正在下载中，需要手动暂停，之后再启动
 
 # 安装
-运行环境需要python，目前支持的python版本：  
-  
+运行环境需要python，目前支持的python版本：
+
 ```
-python2.7  
+python2.7
 python3.x
-``` 
-  
-安装依赖库，使用pip，Linux、Mac非root需要添加sudo  
-  
+```
+
+安装依赖库，使用pip，Linux、Mac非root需要添加sudo
+
 ```shell
 pip install -r requirements.txt
-``` 
+```
 
 # 使用
 

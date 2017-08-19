@@ -79,7 +79,7 @@ class BaiduCloudEngine():
 
         # 读取cookie
         cookie = self.get_cookies()
-        if cookie is not None:
+        if cookie is not None and cookie is not False:
             self.session.cookies = cookie
             self.get_token()
             self.logined = True

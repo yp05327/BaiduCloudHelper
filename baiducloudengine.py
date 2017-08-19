@@ -560,16 +560,12 @@ class BaiduCloudEngine():
         :returns: string格式下载链接
         '''
 
-        if link == 0:
-            '''
-            直链暂不支持
-
-            '''
-            url = pcs_rest_url
-            url += '?method=%s&app_id=%s&path=%s' % ('download', '250528', urllib.quote(dir))
+        if link == '0':
+            url = self.get_baiducloudclient_url(dir)
         else:
             url = pcs_rest_url
             url += '?method=%s&app_id=%s&path=%s' % ('download', '250528', urllib.quote(dir))
+
         return url
     
     def get_file_size(self, url):
@@ -610,3 +606,37 @@ class BaiduCloudEngine():
         except Exception:
             utils.show_msg('错误：Check file failed.')
             return False
+
+    def get_baiducloudclient_url(self, dir):
+        headers = {
+            'User-Agent': 'netdisk;2.1.0;pc;pc-mac;10.12.5;macbaiduyunguanjia'
+        }
+
+        # 申请加速，若失败自动获取的是普通链接
+        url = 'https://pan.baidu.com/rest/2.0/membership/speeds/freqctrl'
+        postdata = {
+            'method': 'consume'
+        }
+        try:
+            self.get_response(url, post_data=postdata, headers=headers)
+
+        except Exception:
+            utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误：Get file size failed.url %s.' % url)
+            return False
+
+        # 获取链接
+        url = 'https://d.pcs.baidu.com/rest/2.0/pcs/file?time=' + utils.get_time() + '&clienttype=21&version=2.1.0&vip=0&method=locatedownload&app_id=250528&esl=1&ver=4.0&dtype=1&ehps=1&check_blue=1&path=' + dir + '&err_ver=1.0'
+
+        try:
+            response = self.get_response(url, headers=headers)
+
+        except Exception:
+            utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误：Get file size failed.url %s.' % url)
+            return False
+
+        # 获取第一个url
+        url_info = json.loads(response)
+
+        return url_info['urls'][0]['url']

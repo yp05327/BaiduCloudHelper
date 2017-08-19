@@ -144,8 +144,8 @@ class DownloadEngine:
         self.webserver = webserver
         # 默认下载库
         self.downloadengine = downloadengine
-        # 每个区块大小，目前默认为10M
-        self.delta_range = 1024 * 1024 * 10
+        # 每个区块大小，目前默认为1M
+        self.delta_range = 1024 * 1024 * 1
         # 线程数
         self.thread_num = thread_num
         # 创建线程池
@@ -255,8 +255,10 @@ class DownloadEngine:
 
         range = task.ranges[range_id][0:2]
 
-        headers = task.headers
-        headers['Range'] = 'bytes=%d-%d' % range
+        headers = {
+            'Range': 'bytes=%d-%d' % range,
+            'User-Agent': 'netdisk;2.1.0;pc;pc-mac;10.12.5;macbaiduyunguanjia'
+        }
 
         success = False
 

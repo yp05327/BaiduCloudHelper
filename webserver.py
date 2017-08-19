@@ -10,7 +10,8 @@ from downloadengine import DownloadEngine
 import utils
 
 bdce = BaiduCloudEngine(webserver=True)
-de = DownloadEngine(bdce, thread_num=15, webserver=True)
+# 注意直链连接最大连接数为120
+de = DownloadEngine(bdce, thread_num=120, webserver=True)
 
 pushCommand = '服务器运行中'
 tmp_lastmsg = ''

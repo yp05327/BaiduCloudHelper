@@ -16,8 +16,8 @@ download_file = ''
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 #user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
 
-def download(bdce):
-    url = bdce.get_download_url(disk_file, 1) # 0为普通直链，1为特殊链
+def download(bdce, link):
+    url = bdce.get_download_url(disk_file, link) # 0为普通直链，1为特殊链
     size = bdce.get_file_size(url)
     
     if not size:
@@ -43,11 +43,11 @@ def run():
 
     if bdce.logined:
         utils.show_msg('登录成功')
-        download_task(bdce, 1)
+        download_task(bdce, 0)
     else:
         if bdce.login(username, password):
             utils.show_msg('登录成功')
-            download_task(bdce, 1)
+            download_task(bdce, 0)
         else:
             utils.show_msg('登录失败')
             return 0

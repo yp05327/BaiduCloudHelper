@@ -3,3 +3,4 @@ Threadpool==1.3.2
 Flask==0.12
 Flask-Cors==3.0.2
 pycrypto==2.6.1
+requests==2.13.0

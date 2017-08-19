@@ -5,14 +5,13 @@ from threadpool import *
 import traceback
 import os
 import json
+import requests
 
 # 兼容2.7和3.x
 try:
     import urllib2
     import cookielib
-    import urllib
 except ImportError:
-    import urllib.parse as urllib
     import urllib.request as urllib2
     import http.cookiejar as cookielib
     
@@ -40,7 +39,7 @@ class DownloadTask:
         :param from_file: 是否是从已存在任务配置文件初始化，默认为False
         '''
         
-        self.cookies = bdce.get_cookies()
+        self.session = bdce.get_session()
         self.headers = bdce.get_headers()
         self.url = url
         self.name = name
@@ -129,17 +128,22 @@ class DownloadTask:
             return False
 
 class DownloadEngine:
-    def __init__(self, bdce, thread_num=10, webserver=False):
+    def __init__(self, bdce, thread_num=10, webserver=False, downloadengine=0):
         '''
         初始化
 
         :param bdce: 百度云引擎
+        :param thread_num: 下载线程数
+        :param webserver: 是否是webserver调用
+        :param downloadengine: 默认下载库，0为requests，1为urllib2
         :param webserver: 是否为网页服务启动，默认为False
         '''
 
         self.bdce = bdce
         # 是否为web服务调用
         self.webserver = webserver
+        # 默认下载库
+        self.downloadengine = downloadengine
         # 每个区块大小，目前默认为10M
         self.delta_range = 1024 * 1024 * 10
         # 线程数
@@ -251,37 +255,45 @@ class DownloadEngine:
 
         range = task.ranges[range_id][0:2]
 
-        # 设置 cookie
-        cj = cookielib.CookieJar()
-
-        for cookie in task.cookies:
-            cj.set_cookie(cookie)
-
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-
         headers = task.headers
         headers['Range'] = 'bytes=%d-%d' % range
 
-        req = urllib2.Request(task.url, headers=headers)
-
         success = False
 
-        while not success:
-            try:
-                response = opener.open(req)
+        if self.downloadengine == 0:
+            # 使用requests
+            while not success:
+                try:
+                    response = task.session.get(task.url, headers=headers)
 
-                success = True
-            except Exception:
-                utils.show_msg(traceback.print_exc())
-                utils.show_msg('错误：Get range (%d,%d) failed.' % range)
+                    success = True
+                except Exception:
+                    utils.show_msg(traceback.print_exc())
+                    utils.show_msg('错误：Get range (%d,%d) failed.' % range)
+                    return False
 
-        res = response.read()
+            res = response.content
 
-        encoding = response.info().get('Content-Encoding')
-        if encoding == 'gzip':
-            res = utils.gzip_decode(res)
-        elif encoding == 'deflate':
-            res = utils.deflate_decode(res)
+        elif self.downloadengine == 1:
+            # 使用urllib2
+            opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(task.session.cookies))
+
+            req = urllib2.Request(task.url, headers=headers)
+
+            while not success:
+                try:
+                    response = opener.open(req)
+
+                    success = True
+                except Exception:
+                    utils.show_msg(traceback.print_exc())
+                    utils.show_msg('错误：Get range (%d,%d) failed.' % range)
+                    return False
+
+            res = response.read()
+        else:
+            utils.show_msg('错误：下载引擎downloadengine参数错误.')
+            return False
 
         # 写入文件
         try:
@@ -292,8 +304,7 @@ class DownloadEngine:
 
         except Exception:
             utils.show_msg(traceback.print_exc())
-            utils.show_msg('错误：Can\'t write to tmp file')
-            print(range)
+            utils.show_msg('错误：Can\'t write to tmp file, range:(%d,%d)' % range)
             return False
 
         task.ranges[range_id] = (range[0], range[1], 1)

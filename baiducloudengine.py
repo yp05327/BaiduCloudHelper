@@ -4,9 +4,11 @@ import errmsg
 
 import re
 import io
+import os
 import traceback
 import base64
 import json
+import requests
 
 from PIL import Image
 from Crypto.PublicKey import RSA
@@ -15,19 +17,18 @@ from Crypto.Cipher    import PKCS1_v1_5
 
 # 兼容2.7和3.x
 try:
-    import urllib2
     import cookielib
     import urllib
 except ImportError:
-    import urllib.parse as urllib
-    import urllib.request as urllib2
     import http.cookiejar as cookielib
+    import urllib.parse as urllib
 
 '''
 这是一个百度云引擎模块
 目前已经实现功能：
 登陆
 退出登陆
+自动登录
 
 目标功能：
 获取文件目录
@@ -35,9 +36,9 @@ except ImportError:
 获取文件大小
 '''
 
-home_url = 'https://www.baidu.com'
+home_url = 'https://pan.baidu.com'
 passport_url = 'https://passport.baidu.com/v2/api/?'
-logout_url = 'https://passport.baidu.com/?logout&u=http://pan.baidu.com'
+logout_url = 'https://passport.baidu.com/?logout&u=https%3A%2F%2Fpan.baidu.com%2F'
 # 验证码
 captcha_url = 'https://passport.baidu.com/cgi-bin/genimage?'
 pan_api_url = 'http://pan.baidu.com/api/'
@@ -62,8 +63,8 @@ class BaiduCloudEngine():
         '''
 
         self.webserver = webserver
-        self.cj = cookielib.CookieJar()
-        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj))
+        self.session = requests.session()
+
         self.headers = { 'Accept':'*/*',
                     'Accept-Encoding':'gzip, deflate',
                     'Accept-Language':'zh-CN,zh;q=0.8',
@@ -75,10 +76,18 @@ class BaiduCloudEngine():
         # 用于网页模式
         self.verifycode = ''
         self.verifycode_img_url = ''
-        self.logined = False
 
-    def get_cookies(self):
-        return self.cj
+        # 读取cookie
+        cookie = self.get_cookies()
+        if cookie is not None:
+            self.session.cookies = cookie
+            self.get_token()
+            self.logined = True
+        else:
+            self.logined = False
+
+    def get_session(self):
+        return self.session
     
     def get_headers(self):
         return self.headers
@@ -93,22 +102,20 @@ class BaiduCloudEngine():
         :param headers: 可以自定义请求头
         :returns: http返回内容，错误返回''
         '''
-
-        if post_data is not None:
-            post_data = urllib.urlencode(post_data).encode(encoding='utf-8')
         
         req_headers = self.headers
         
         if headers is not None:
             for header in headers:
                 req_headers[header] = headers[header]
-                
-        req = urllib2.Request(url, data=post_data, headers=req_headers)
         
         tryed_time = 0
         while tryed_time <= 3:
             try:
-                response = self.opener.open(req, timeout=5)
+                if post_data is None:
+                    response = self.session.get(url, headers=req_headers)
+                else:
+                    response = self.session.post(url, data=post_data, headers=req_headers)
                 break
             except Exception:
                 tryed_time += 1
@@ -123,20 +130,8 @@ class BaiduCloudEngine():
                 utils.show_msg('错误：Open url %s failed.' % url)
 
             return ''
-        
-        content = response.read()
-        
-        encoding = response.info().get('Content-Encoding')
-        if encoding == 'gzip':
-            content = utils.gzip_decode(content)
-        elif encoding == 'deflate':
-            content = utils.deflate_decode(content)
-        
-        # 3.x中为bytes类型，需要转成string
-        if type(content) != type('') and html:
-            content = content.decode()
 
-        return content
+        return response.content
     
     def check_login(self, username):
         '''
@@ -147,32 +142,30 @@ class BaiduCloudEngine():
                   0为失败，None为发生错误
         '''
         
-        if self.get_response(home_url) == '':
+        response =  self.get_response(home_url)
+
+        if response == '':
             return False
+        else:
+            # 获取dv
+            try:
+                tmp = re.findall('id=\"dv_Input\" type=\"hidden\" value=\"(.*?)\"', response)
+
+            except Exception:
+                utils.show_msg(traceback.print_exc())
+                utils.show_msg('错误：Can\'t get dv_Input.')
+                return False
         
         codestring = None
-        
-        # 通过getapi获取token
-        passport_getapi_url = passport_url + 'getapi&tpl=netdisk&apiver=v3&tt=%s' % utils.get_time() 
-        passport_getapi_url += '&class=login&logintype=basicLogin&callback=bd__cbs__pwxtn7'
-        passport_getapi_response = self.get_response(passport_getapi_url)
-        
-        json = utils.get_json_from_response(passport_getapi_response)
-        
-        try:
-            json = eval(json[0])
-            self.token = json['data']['token']
-            codeString = json['data']['codeString']
-        except Exception:
-            utils.show_msg(traceback.print_exc())
-            utils.show_msg('错误：Can\'t get passport getapi\'s response json.')
+
+        if not self.get_token():
             return False
-        
+
         # logincheck
         passport_logincheck_url = passport_url + 'logincheck&&token=%s' % self.token
         passport_logincheck_url += '&tpl=netdisk&apiver=v3&tt=%s' % utils.get_time()
         passport_logincheck_url += '&username=%s' % urllib.quote(username)
-        passport_logincheck_url += '&isphone=false&callback=bd__cbs__q4ztud'
+        passport_logincheck_url += '&isphone=false&callback=bd__cbs__' + utils.get_callback_function()
         passport_logincheck_response = self.get_response(passport_logincheck_url)
 
         json = utils.get_json_from_response(passport_logincheck_response)
@@ -188,6 +181,29 @@ class BaiduCloudEngine():
         
         return codeString
 
+    def get_token(self):
+        '''
+        通过getapi获取token
+
+        :returns: False为发生错误
+        '''
+
+        passport_getapi_url = passport_url + 'getapi&tpl=netdisk&apiver=v3&tt=%s' % utils.get_time()
+        passport_getapi_url += '&class=login&logintype=basicLogin&callback=bd__cbs__' + utils.get_callback_function()
+        passport_getapi_response = self.get_response(passport_getapi_url)
+
+        json = utils.get_json_from_response(passport_getapi_response)
+
+        try:
+            json = eval(json[0])
+            self.token = json['data']['token']
+        except Exception:
+            utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误：Can\'t get passport getapi\'s response json.')
+            return False
+
+        return True
+
     def get_publickey(self, ):
         '''
         参考自https://github.com/ly0/baidupcsapi/blob/master/baidupcsapi/api.py
@@ -198,6 +214,38 @@ class BaiduCloudEngine():
         jdata = json.loads(content.replace(b'\'', b'"').decode('utf-8'))
 
         return jdata['pubkey'], jdata['key']
+
+    def get_verifycode(self):
+        '''
+        命令行模式获取用户输入的验证码，网页服务器模式获取验证码地址
+
+        :returns: 若开启了网页服务器返回值为False,否则返回用户输入的验证码
+        '''
+
+        if self.codestring != '':
+            # 验证码
+            verifycode_img_url = captcha_url + self.codestring
+            if self.webserver:
+                self.verifycode_img_url = verifycode_img_url
+                self.verifycode = ''
+                return False
+            else:
+                verifycode_img_response = self.get_response(verifycode_img_url, html=False)
+                verifycode_img_bytes = io.BytesIO(verifycode_img_response)
+                verifycode_img = Image.open(verifycode_img_bytes)
+                verifycode_img.show()
+
+                # 兼容3.x
+                try:
+                    captch = raw_input("Enter verifycode：")
+                except NameError:
+                    captch = input("Enter verifycode：")
+
+                verifycode_img.close()
+        else:
+            captch = ''
+
+        return captch
 
     def login(self, username, password, verify=''):
         '''
@@ -210,11 +258,11 @@ class BaiduCloudEngine():
         :param verify: 验证码，默认为空
         :returns: True为成功，False为失败或发生错误
         '''
-        
+
         retry = 0
         
         while retry <= max_retry_times:
-            if self.verifycode_img_url != '' and self.verifycode != '':
+            if self.verifycode != '':
                 captch = self.verifycode
                 self.verifycode_img_url = ''
                 self.verifycode = ''
@@ -228,28 +276,10 @@ class BaiduCloudEngine():
                     utils.show_msg('错误:codestring is None.')
                     return False
 
-                if self.codestring != '':
-                    # 验证码
-                    verifycode_img_url = captcha_url + self.codestring
-                    if self.webserver:
-                        self.verifycode_img_url = verifycode_img_url
-                        self.verifycode = ''
-                        return False
-                    else:
-                        verifycode_img_response = self.get_response(verifycode_img_url, html=False)
-                        verifycode_img_bytes = io.BytesIO(verifycode_img_response)
-                        verifycode_img = Image.open(verifycode_img_bytes)
-                        verifycode_img.show()
-
-                        # 兼容3.x
-                        try:
-                            captch = raw_input("Enter verifycode：")
-                        except NameError:
-                            captch = input("Enter verifycode：")
-
-                    verifycode_img.close()
-                else:
-                    captch = ''
+                captch = self.get_verifycode()
+                # 如果为网页模式则返回False
+                if captch is False:
+                    return False
 
             # 此处参考自https://github.com/ly0/baidupcsapi/blob/master/baidupcsapi/api.py
             pubkey, rsakey = self.get_publickey()
@@ -258,31 +288,42 @@ class BaiduCloudEngine():
             # 以上为参考，变量、函数名、使用函数根据项目需求略微修改
 
             post_data = {"staticpage": "http://pan.baidu.com/res/static/thirdparty/pass_v3_jump.html",
-                        "charset": "utf-8",
-                        "token": self.token,
-                        "tpl": "netdisk",
-                        "subpro": "",
-                        "apiver": "v3",
-                        "tt": utils.get_time(),
-                        "codestring": self.codestring,
-                        "safeflg": "0",
-                        "u": "http://pan.baidu.com/",
-                        "isPhone": "",
-                        "quick_user": "0",
-                        "logintype": "basicLogin",
-                        "logLoginType": "pc_loginBasic",
-                        "idc": "",
-                        "loginmerge": "true",
-                        "username": username,
-                        "password": password_rsaed,
-                        "verifycode": captch,  # 验证码
-                        "mem_pass": "on",
-                        "rsakey": str(rsakey),
-                        "crypttype": "12",
-                        "ppui_logintime": "2602",
-                        "callback": "parent.bd__pcbs__msdlhs"
+                         "charset": "utf-8",
+                         "token": self.token,
+                         "tpl": "netdisk",
+                         "subpro": "netdisk_web",
+                         "apiver": "v3",
+                         "tt": utils.get_time(),
+                         "codestring": self.codestring,
+                         "safeflg": "0",
+                         "u": "https://pan.baidu.com/disk/home",
+                         "isPhone": "false",
+                         "quick_user": "0",
+                         "logintype": "basicLogin",
+                         "logLoginType": "pc_loginBasic",
+                         "idc": "",
+                         "loginmerge": "true",
+                         "username": username,
+                         "password": password_rsaed,
+                         "verifycode": captch,  # 验证码
+                         "mem_pass": "on",
+                         "rsakey": str(rsakey),
+                         "crypttype": "12",
+                         "ppui_logintime": "8084",
+                         "callback": "parent.bd__pcbs__" + utils.get_callback_function(),
+                         "detect": 1,
+                         "foreignusername": "",
+                         "gid": "C6159FB-F3B3-46E1-95A8-F374C5848DA3"
                         }
+            '''
+            gid 原始代码：
+            return "xxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(e) {
+                var t = 16 * Math.random() | 0
+                  , n = "x" == e ? t : 3 & t | 8;
+                return n.toString(16)
+            }).toUpperCase()
 
+            '''
             passport_logincheck_response = self.get_response(passport_url + 'login', post_data)
             
             try:
@@ -310,15 +351,38 @@ class BaiduCloudEngine():
                 utils.show_msg('错误:Can\'t get check login error number.')
                 return False
             
-            if errno == '3' or errno == '6' or errno == '257' or errno == '200010':
+            if errno == '3' or errno == '6' or errno == '200010':
                 # 验证码错误，需要重新输入
                 pass
-                
+
+            elif errno == '257':
+                # 未输入验证码或者首次登陆需要获取验证码
+                tmp = re.findall('&codeString=([A-Za-z0-9]*?)&userName', passport_logincheck_response)
+                if len(tmp) > 0:
+                    self.codestring = tmp[0]
+                else:
+                    utils.show_msg('错误：无法获取codeString信息.')
+                    return False
+
+                # 获取当前验证码
+                result = self.get_verifycode()
+
+                if result is False:
+                    # 如果为网页模式则返回False
+                    utils.show_msg('错误:登陆错误，请重新尝试，错误代码：' + errno + '，错误信息：' + errmsg.get_login_errmsg(errno))
+                    return False
+                else:
+                    # 如果为命令行模式则直接进入下一次循环
+                    self.verifycode = result
+                    continue
+
             elif errno == '0' or errno == '18' or errno == '400032' or errno == '400034' or errno == '400037' or errno == '400401':
                 # 登陆成功
                 # 访问一次跳转地址和首页
                 self.get_response(jump_url)
                 self.get_response(disk_home_url)
+
+                self.save_cookies()
 
                 self.logined = True
 
@@ -341,15 +405,79 @@ class BaiduCloudEngine():
         :returns: True为成功，False为失败或发生错误
         '''
         
-        passport_logout_response = self.get_response(logout_url)
+        #passport_logout_response = self.get_response(logout_url)
 
-        check_logout = re.findall('立即注册', passport_logout_response)
+        self.session.cookies = cookielib.CookieJar()
+        response = self.get_response(logout_url)
+        check_logout = re.findall('立即注册', response)
+
         if len(check_logout) > 0:
             self.logined = False
+            self.remove_cookies()
             return True
         else:
             return False
-    
+
+    def save_cookies(self):
+        '''
+        保存cookie
+
+        :returns: True为成功，False为失败或发生错误
+        '''
+
+        try:
+            if os.path.isfile('cookie.list'):
+                os.remove('cookie.list')
+
+            fd = open('cookie.list', "wb+")
+
+            cookie_list = requests.utils.dict_from_cookiejar(self.session.cookies)
+
+            fd.write(json.dumps(cookie_list))
+            fd.close()
+
+            return True
+        except Exception:
+            utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误：Can\'t save cookie list file.')
+            return False
+
+    def get_cookies(self):
+        '''
+        读取cookie
+
+        :returns: 返回值直接赋值给requests.session()，None为无cookie
+        '''
+
+        response = self.get_response(home_url)
+        if response is False:
+            return False
+
+        try:
+            if not os.path.isfile('cookie.list'):
+                fd = open('cookie.list', "wb+")
+            else:
+                fd = open('cookie.list', "rb+")
+
+            cookie = fd.read()
+            fd.close()
+
+            if cookie == '':
+                return None
+            else:
+                return requests.utils.cookiejar_from_dict(json.loads(cookie))
+
+        except Exception:
+            utils.show_msg(traceback.print_exc())
+            utils.show_msg('错误：Can\'t get cookie list file.')
+            return False
+
+    def remove_cookies(self):
+        '''
+        删除cookie
+        '''
+        os.remove('cookie.list')
+
     def do_pan_api(self, api, args):
         '''
         执行百度网盘api
@@ -454,10 +582,9 @@ class BaiduCloudEngine():
         headers = {
             'Range': 'bytes=0-4'
         }
-        
-        req = urllib2.Request(url, headers=headers)
+
         try:
-            response = self.opener.open(req)
+            response = self.session.get(url, headers=headers)
         except Exception:
             utils.show_msg(traceback.print_exc())
             utils.show_msg('错误：Get file size failed.url %s.' % url)

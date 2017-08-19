@@ -6,6 +6,7 @@ import os
 import utils
 import sys
 
+# 注意命令行运行用于开发调试，请勿继续使用
 username = ''
 password = ''
 disk_file = ''
@@ -24,10 +25,15 @@ def download(bdce):
 
     de = DownloadEngine(bdce)
     task_id = de.add_task(url, file_name, size, download_file)
-    
+
     if task_id != -1 | task_id != False:
         de.start_task(task_id)
-    
+
+def download_task(bdce, task_id):
+    de = DownloadEngine(bdce)
+    de.start_task(task_id)
+    input("\n\nPress the enter key to exit.")
+
 def run():
     bdce = BaiduCloudEngine()
 
@@ -35,18 +41,22 @@ def run():
         utils.show_msg('请打开main.py修改相关信息')
         return False
 
-    if bdce.login(username, password):
+    if bdce.logined:
         utils.show_msg('登录成功')
-        download(bdce)
+        download_task(bdce, 1)
     else:
-        utils.show_msg('登录失败')
-        return 0
+        if bdce.login(username, password):
+            utils.show_msg('登录成功')
+            download_task(bdce, 1)
+        else:
+            utils.show_msg('登录失败')
+            return 0
     
-    if bdce.logout():
-       utils.show_msg('退出登录成功')
-    else:
-        utils.show_msg('退出登录失败')
-        return 0
+    #if bdce.logout():
+    #   utils.show_msg('退出登录成功')
+    #else:
+    #    utils.show_msg('退出登录失败')
+    #    return 0
     
 def main(argv):
     if '-w' in argv:

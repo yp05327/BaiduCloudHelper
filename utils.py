@@ -2,6 +2,7 @@
 import time
 import re
 import zlib
+import random
 
 from gzip import GzipFile
 from PIL import Image
@@ -76,3 +77,17 @@ def show_msg(msg):
     last_msg = msg
         
     print(msg)
+
+
+def get_callback_function():
+    '''
+    随机生成callback函数名
+
+    :returns: callback函数名
+    '''
+
+    list = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+            'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+            'u', 'v', 'w', 'x', 'y', 'z']
+    return ''.join(random.sample(list, 6))

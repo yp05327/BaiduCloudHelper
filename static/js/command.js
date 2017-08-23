@@ -20,6 +20,9 @@ function msg(e) {
                 if (ranges[i][k][2] == 0){
                     $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).removeAttr('class');
                     $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).attr('class', 'btn btn-default');
+                }else if (ranges[i][k][2] == 1001){
+                    $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).removeAttr('class');
+                    $('#range_' + i + '_' + ranges[i][k][0] + '_' + ranges[i][k][1]).attr('class', 'btn btn-warning');
                 }else if (ranges[i][k][2] == 1){
                     successed += 1;
 

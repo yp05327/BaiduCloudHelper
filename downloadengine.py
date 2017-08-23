@@ -255,6 +255,11 @@ class DownloadEngine:
 
         range = task.ranges[range_id][0:2]
 
+        # 正在下载区块标识1001
+        task.ranges[range_id] = (range[0], range[1], 1001)
+
+        print("Start downloading (%d,%d)" % range)
+
         headers = {
             'Range': 'bytes=%d-%d' % range,
             'User-Agent': 'netdisk;2.1.0;pc;pc-mac;10.12.5;macbaiduyunguanjia'

@@ -617,8 +617,13 @@ class BaiduCloudEngine():
         postdata = {
             'method': 'consume'
         }
+        '''
+        get为获取是否可以使用状态，freq_cnt=1时可以使用
+        consume为获取链接
+        '''
+
         try:
-            self.get_response(url, post_data=postdata, headers=headers)
+            responese = self.get_response(url, post_data=postdata, headers=headers)
 
         except Exception:
             utils.show_msg(traceback.print_exc())

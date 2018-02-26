@@ -91,3 +91,17 @@ def get_callback_function():
             'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
             'u', 'v', 'w', 'x', 'y', 'z']
     return ''.join(random.sample(list, 6))
+
+def get_gid_char(range_start):
+    '''
+    随机生成gid的每一位字符
+
+    Args：
+        range_start:起始范围
+    Returns:
+        gid字符
+    '''
+
+    char = hex(random.randint(range_start, 15))
+    char = char[2:].upper()
+    return char

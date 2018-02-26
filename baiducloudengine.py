@@ -9,6 +9,7 @@ import traceback
 import base64
 import json
 import requests
+import random
 
 from PIL import Image
 from Crypto.PublicKey import RSA
@@ -287,6 +288,13 @@ class BaiduCloudEngine():
             password_rsaed = base64.b64encode(PKCS1_v1_5.new(key).encrypt(password.encode('utf-8')))
             # 以上为参考，变量、函数名、使用函数根据项目需求略微修改
 
+            #计算gid
+            gid = "xxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+            for i in xrange(29):
+                gid = re.sub('x', utils.get_gid_char(0), gid,1)
+            gid = re.sub('y', utils.get_gid_char(8), gid,1)
+
+
             post_data = {"staticpage": "http://pan.baidu.com/res/static/thirdparty/pass_v3_jump.html",
                          "charset": "utf-8",
                          "token": self.token,
@@ -309,11 +317,11 @@ class BaiduCloudEngine():
                          "mem_pass": "on",
                          "rsakey": str(rsakey),
                          "crypttype": "12",
-                         "ppui_logintime": "8084",
+                         "ppui_logintime": random.randint(1000,9999),
                          "callback": "parent.bd__pcbs__" + utils.get_callback_function(),
                          "detect": 1,
                          "foreignusername": "",
-                         "gid": "C6159FB-F3B3-46E1-95A8-F374C5848DA3"
+                         "gid": gid
                         }
             '''
             gid 原始代码：
@@ -323,6 +331,7 @@ class BaiduCloudEngine():
                 return n.toString(16)
             }).toUpperCase()
 
+            分析后得出此代码为：x填充16进制随机数，y填充大于等于8的16进制随机数
             '''
             passport_logincheck_response = self.get_response(passport_url + 'login', post_data)
             
@@ -409,7 +418,7 @@ class BaiduCloudEngine():
 
         self.session.cookies = cookielib.CookieJar()
         response = self.get_response(logout_url)
-        check_logout = re.findall('立即注册', response)
+        check_logout = re.findall('login-main', response)
 
         if len(check_logout) > 0:
             self.logined = False
@@ -476,7 +485,8 @@ class BaiduCloudEngine():
         '''
         删除cookie
         '''
-        os.remove('cookie.list')
+        if os.path.exists('cookie.list'):
+            os.remove('cookie.list')
 
     def do_pan_api(self, api, args):
         '''

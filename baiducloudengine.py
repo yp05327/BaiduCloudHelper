@@ -519,7 +519,14 @@ class BaiduCloudEngine():
             return False
         
         # 错误处理
-        utils.show_msg('错误:执行百度云api：' + api + '时出错，错误代码：' + errno + '，错误信息：' + errmsg.get_errmsg_by_errno(errno))
+        if errno == '-6':
+            # cookie失效
+            self.logined = False
+            self.remove_cookies()
+            utils.show_msg('错误:cookies已失效，请刷新页面重新登陆')
+        else:
+            utils.show_msg('错误:执行百度云api：' + api + '时出错，错误代码：' + errno + '，错误信息：' + errmsg.get_errmsg_by_errno(errno))
+
         return False
     
     def get_list(self, dir, page=None, page_size=None, order='name', desc='1'):

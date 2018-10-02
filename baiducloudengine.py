@@ -11,7 +11,6 @@ import json
 import requests
 import random
 
-from PIL import Image
 from Crypto.PublicKey import RSA
 from Crypto.Cipher    import PKCS1_v1_5
 # Crypto代替rsa参考：https://git.wageningenur.nl/aflit001/ibrowser/commit/1b2437fe81af9a8511bf847c1ada69a9de8df893?view=parallel&w=1
@@ -222,6 +221,7 @@ class BaiduCloudEngine():
 
         :returns: 若开启了网页服务器返回值为False,否则返回用户输入的验证码
         '''
+        from PIL import Image
 
         if self.codestring != '':
             # 验证码

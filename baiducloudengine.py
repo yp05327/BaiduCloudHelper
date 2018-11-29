@@ -49,7 +49,7 @@ get_publickey_url = 'https://passport.baidu.com/v2/getpublickey?token='
 max_retry_times = 10
 
 class BaiduCloudEngine():
-    def __init__(self, webserver=False, user_agent='Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'):
+    def __init__(self, webserver=False, user_agent='netdisk;4.6.2.0;PC;PC-Windows;10.0.10240;WindowsBaiduYunGuanJia'):
         '''
         初始化百度云引擎
         
@@ -132,10 +132,11 @@ class BaiduCloudEngine():
             return ''
 
         return response.content
-    
+
     def check_login(self, username):
         '''
         检查登陆信息，获取token和codestring
+        此函数不再使用
         
         :param username: 用户名
         :returns: 正常返回值为string格式值为codestring
@@ -163,7 +164,7 @@ class BaiduCloudEngine():
 
         # logincheck
         passport_logincheck_url = passport_url + 'logincheck&&token=%s' % self.token
-        passport_logincheck_url += '&tpl=netdisk&apiver=v3&tt=%s' % utils.get_time()
+        passport_logincheck_url += '&tpl=pp&apiver=v3&tt=%s' % utils.get_time()
         passport_logincheck_url += '&username=%s' % urllib.quote(username)
         passport_logincheck_url += '&isphone=false&callback=bd__cbs__' + utils.get_callback_function()
         passport_logincheck_response = self.get_response(passport_logincheck_url)
@@ -188,7 +189,7 @@ class BaiduCloudEngine():
         :returns: False为发生错误
         '''
 
-        passport_getapi_url = passport_url + 'getapi&tpl=netdisk&apiver=v3&tt=%s' % utils.get_time()
+        passport_getapi_url = passport_url + 'getapi&tpl=pp&apiver=v3&tt=%s' % utils.get_time()
         passport_getapi_url += '&class=login&logintype=basicLogin&callback=bd__cbs__' + utils.get_callback_function()
         passport_getapi_response = self.get_response(passport_getapi_url)
 
@@ -268,6 +269,7 @@ class BaiduCloudEngine():
                 self.verifycode_img_url = ''
                 self.verifycode = ''
             else:
+                '''
                 self.codestring = self.check_login(username)
 
                 if self.codestring == 0:
@@ -276,6 +278,10 @@ class BaiduCloudEngine():
                 if self.codestring is None:
                     utils.show_msg('错误:codestring is None.')
                     return False
+                '''
+                if not self.get_token():
+                    return False
+                self.codestring = ''
 
                 captch = self.get_verifycode()
                 # 如果为网页模式则返回False
@@ -294,22 +300,21 @@ class BaiduCloudEngine():
                 gid = re.sub('x', utils.get_gid_char(0), gid,1)
             gid = re.sub('y', utils.get_gid_char(8), gid,1)
 
-
-            post_data = {"staticpage": "http://pan.baidu.com/res/static/thirdparty/pass_v3_jump.html",
+            post_data = {"staticpage": "http://www.baidu.com/cache/user/html/v3Jump.html",
                          "charset": "utf-8",
                          "token": self.token,
-                         "tpl": "netdisk",
-                         "subpro": "netdisk_web",
+                         "tpl": "pp",
+                         "subpro": "",
                          "apiver": "v3",
                          "tt": utils.get_time(),
                          "codestring": self.codestring,
                          "safeflg": "0",
-                         "u": "https://pan.baidu.com/disk/home",
+                         "u": "https://passport.baidu.com/",
                          "isPhone": "false",
                          "quick_user": "0",
                          "logintype": "basicLogin",
                          "logLoginType": "pc_loginBasic",
-                         "idc": "",
+                         #"idc": "",
                          "loginmerge": "true",
                          "username": username,
                          "password": password_rsaed,
@@ -317,12 +322,13 @@ class BaiduCloudEngine():
                          "mem_pass": "on",
                          "rsakey": str(rsakey),
                          "crypttype": "12",
-                         "ppui_logintime": random.randint(1000,9999),
+                         "ppui_logintime": random.randint(10000,99999),
                          "callback": "parent.bd__pcbs__" + utils.get_callback_function(),
                          "detect": 1,
                          "foreignusername": "",
                          "gid": gid
                         }
+
             '''
             gid 原始代码：
             return "xxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(e) {
@@ -333,6 +339,7 @@ class BaiduCloudEngine():
 
             分析后得出此代码为：x填充16进制随机数，y填充大于等于8的16进制随机数
             '''
+
             passport_logincheck_response = self.get_response(passport_url + 'login', post_data)
             
             try:
@@ -397,10 +404,51 @@ class BaiduCloudEngine():
 
                 return True
             
-            elif errno == '120019' or errno == '120021':
+            elif errno == '120019':
                 utils.show_msg('错误：%s，短时间密码错误次数过多, 请先通过 passport.baidu.com 解除锁定' % errno)
                 return False
-            
+            elif errno == '120021':
+                # 用户需要外部认证(邮箱)
+                auth_token = re.findall('authtoken=([^&]+)', passport_logincheck_response)[0]
+                loginproxy_url = re.findall('loginproxy=([^&]+)', passport_logincheck_response)[0]
+                responese = self.get_response('https://passport.baidu.com/v2/sapi/authwidgetverify' +
+                                              '?authtoken=' + auth_token +
+                                              '&type=email' +
+                                              '&apiver=v3' +
+                                              '&action=send' +
+                                              '&vcode=' +
+                                              '&questionAndAnswer=' +
+                                              '&needsid=' +
+                                              '&rsakey=' +
+                                              '&countrycode=' +
+                                              '&subpro=' +
+                                              '&callback=' +
+                                              '&tpl=mn' +
+                                              '&u=https://www.baidu.com/'
+                                            )
+                responese = json.loads(responese)
+                if responese['errmsg'] is None:
+                    vcode = input('请输入邮箱验证码：')
+                    responese = self.get_response('https://passport.baidu.com/v2/sapi/authwidgetverify' +
+                                                 '?authtoken=' + auth_token +
+                                                 '&type=email' +
+                                                 '&apiver=v3' +
+                                                 '&action=check' +
+                                                 '&vcode=' + str(vcode) +
+                                                 '&questionAndAnswer=' +
+                                                 '&needsid=' +
+                                                 '&rsakey=' +
+                                                 '&countrycode=' +
+                                                 '&subpro=' +
+                                                 '&callback=')
+                    responese = json.loads(responese)
+                    if responese['errno'] == 110000:
+                        loginproxy_resp = self.get_response(urllib.unquote(loginproxy_url.decode()))
+                        return True
+                else:
+                    utils.show_msg('错误：发送安全验证请求失败')
+                    return False
+
             utils.show_msg('错误:登陆错误，请重新尝试，错误代码：' + errno + '，错误信息：' + errmsg.get_login_errmsg(errno))
             retry += 1
 
@@ -626,7 +674,7 @@ class BaiduCloudEngine():
 
     def get_baiducloudclient_url(self, dir):
         headers = {
-            'User-Agent': 'netdisk;2.1.0;pc;pc-mac;10.12.5;macbaiduyunguanjia'
+            'User-Agent': 'netdisk;4.6.2.0;PC;PC-Windows;10.0.10240;WindowsBaiduYunGuanJia'
         }
 
         # 申请加速，若失败自动获取的是普通链接

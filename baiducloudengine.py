@@ -76,6 +76,7 @@ class BaiduCloudEngine():
         # 用于网页模式
         self.verifycode = ''
         self.verifycode_img_url = ''
+        self.mail_verify_mode = False
 
         # 读取cookie
         cookie = self.get_cookies()
@@ -249,7 +250,7 @@ class BaiduCloudEngine():
 
         return captch
 
-    def login(self, username, password, verify=''):
+    def login(self, username, password, verify='', mail_verify=''):
         '''
         进行登陆
         
@@ -258,8 +259,16 @@ class BaiduCloudEngine():
         :param username: 用户名
         :param password:密码
         :param verify: 验证码，默认为空
-        :returns: True为成功，False为失败或发生错误
+        :returns: -1为错误，1为成功，2为需要验证码，3为需要邮箱验证码
         '''
+
+        # 如果是验证邮箱mode
+        if self.mail_verify_mode:
+            if self.check_mail_verify_code(mail_verify):
+                self.login_success()
+                return 1
+            else:
+                return -1
 
         retry = 0
         
@@ -280,13 +289,13 @@ class BaiduCloudEngine():
                     return False
                 '''
                 if not self.get_token():
-                    return False
+                    return -1
                 self.codestring = ''
 
                 captch = self.get_verifycode()
-                # 如果为网页模式则返回False
+                # 如果为网页模式则返回2
                 if captch is False:
-                    return False
+                    return 2
 
             # 此处参考自https://github.com/ly0/baidupcsapi/blob/master/baidupcsapi/api.py
             pubkey, rsakey = self.get_publickey()
@@ -356,7 +365,7 @@ class BaiduCloudEngine():
             except Exception:
                 utils.show_msg(traceback.print_exc())
                 utils.show_msg('错误:Can\'t go to jump page.')
-                return False
+                return -1
             
             # 错误处理
             try:
@@ -365,7 +374,7 @@ class BaiduCloudEngine():
             except Exception:
                 utils.show_msg(traceback.print_exc())
                 utils.show_msg('错误:Can\'t get check login error number.')
-                return False
+                return -1
             
             if errno == '3' or errno == '6' or errno == '200010':
                 # 验证码错误，需要重新输入
@@ -378,7 +387,7 @@ class BaiduCloudEngine():
                     self.codestring = tmp[0]
                 else:
                     utils.show_msg('错误：无法获取codeString信息.')
-                    return False
+                    return -1
 
                 # 获取当前验证码
                 result = self.get_verifycode()
@@ -386,33 +395,26 @@ class BaiduCloudEngine():
                 if result is False:
                     # 如果为网页模式则返回False
                     utils.show_msg('错误:登陆错误，请重新尝试，错误代码：' + errno + '，错误信息：' + errmsg.get_login_errmsg(errno))
-                    return False
+                    return 2
                 else:
                     # 如果为命令行模式则直接进入下一次循环
                     self.verifycode = result
                     continue
 
             elif errno == '0' or errno == '18' or errno == '400032' or errno == '400034' or errno == '400037' or errno == '400401':
-                # 登陆成功
-                # 访问一次跳转地址和首页
-                self.get_response(jump_url)
-                self.get_response(disk_home_url)
+                self.login_success()
 
-                self.save_cookies()
-
-                self.logined = True
-
-                return True
+                return 1
             
             elif errno == '120019':
                 utils.show_msg('错误：%s，短时间密码错误次数过多, 请先通过 passport.baidu.com 解除锁定' % errno)
-                return False
+                return -1
             elif errno == '120021':
                 # 用户需要外部认证(邮箱)
-                auth_token = re.findall('authtoken=([^&]+)', passport_logincheck_response)[0]
-                loginproxy_url = re.findall('loginproxy=([^&]+)', passport_logincheck_response)[0]
+                self.auth_token = re.findall('authtoken=([^&]+)', passport_logincheck_response)[0]
+                self.loginproxy_url = re.findall('loginproxy=([^&]+)', passport_logincheck_response)[0]
                 responese = self.get_response('https://passport.baidu.com/v2/sapi/authwidgetverify' +
-                                              '?authtoken=' + auth_token +
+                                              '?authtoken=' + self.auth_token +
                                               '&type=email' +
                                               '&apiver=v3' +
                                               '&action=send' +
@@ -428,33 +430,62 @@ class BaiduCloudEngine():
                                             )
                 responese = json.loads(responese)
                 if responese['errmsg'] is None:
-                    vcode = input('请输入邮箱验证码：')
-                    responese = self.get_response('https://passport.baidu.com/v2/sapi/authwidgetverify' +
-                                                 '?authtoken=' + auth_token +
-                                                 '&type=email' +
-                                                 '&apiver=v3' +
-                                                 '&action=check' +
-                                                 '&vcode=' + str(vcode) +
-                                                 '&questionAndAnswer=' +
-                                                 '&needsid=' +
-                                                 '&rsakey=' +
-                                                 '&countrycode=' +
-                                                 '&subpro=' +
-                                                 '&callback=')
-                    responese = json.loads(responese)
-                    if responese['errno'] == 110000:
-                        loginproxy_resp = self.get_response(urllib.unquote(loginproxy_url.decode()))
-                        return True
+                    if self.webserver:
+                        # 如果是网页模式，直接返回3
+                        self.mail_verify_mode = True
+                        return 3
+                    else:
+                        self.check_mail_verify_code(input('请输入邮箱验证码：'))
+
                 else:
                     utils.show_msg('错误：发送安全验证请求失败')
-                    return False
+                    return -1
 
             utils.show_msg('错误:登陆错误，请重新尝试，错误代码：' + errno + '，错误信息：' + errmsg.get_login_errmsg(errno))
             retry += 1
 
         utils.show_msg('错误:超出最大重试次数：' + str(max_retry_times))
-        return False
-        
+        return -1
+
+    def check_mail_verify_code(self, vcode):
+        '''
+        验证邮箱验证码
+
+        :param vcode: 邮箱验证码
+        :return: True为成功，False为失败或发生错误
+        '''
+        responese = self.get_response('https://passport.baidu.com/v2/sapi/authwidgetverify' +
+                                      '?authtoken=' + self.auth_token +
+                                      '&type=email' +
+                                      '&apiver=v3' +
+                                      '&action=check' +
+                                      '&vcode=' + str(vcode) +
+                                      '&questionAndAnswer=' +
+                                      '&needsid=' +
+                                      '&rsakey=' +
+                                      '&countrycode=' +
+                                      '&subpro=' +
+                                      '&callback=')
+        responese = json.loads(responese)
+        if responese['errno'] == 110000:
+            loginproxy_resp = self.get_response(urllib.unquote(self.loginproxy_url.decode()))
+            self.mail_verify_mode = False
+            return True
+        else:
+            utils.show_msg('错误:邮箱验证码错误' + responese['errno'])
+            return False
+
+    def login_success(self):
+        '''
+        登陆成功后执行，并设置logined状态
+
+        '''
+        self.get_response(disk_home_url)
+
+        self.save_cookies()
+
+        self.logined = True
+
     def logout(self):
         '''
         退出登陆

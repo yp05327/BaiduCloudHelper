@@ -46,6 +46,7 @@ def login():
     username = request.form['username']
     password = request.form['password']
     verify = request.form['verify']
+    mail_verify = request.form['mail_verify']
 
     # 空值检验
     if username == '' or password == '':
@@ -57,20 +58,25 @@ def login():
 
     bdce.verifycode = verify.encode('utf-8')
 
-    if bdce.login(username, password, verify):
+    login_result = bdce.login(username, password, verify, mail_verify)
+
+    if login_result == 1:
         pushCommand = '服务器运行中'
         res = {'success': 1}
         return Response(json.dumps(res), mimetype='application/json')
-    else:
-        # 出错
+    elif login_result == 2:
         if bdce.verifycode_img_url != '':
-            res = {'success': -1, 'error_msg': '请输入验证码', 'verifycode_img_url': bdce.verifycode_img_url}
+            res = {'success': 2, 'error_msg': '请输入验证码', 'verifycode_img_url': bdce.verifycode_img_url}
             pushCommand = '请输入验证码'
             return Response(json.dumps(res), mimetype='application/json')
-        else:
-            pushCommand = utils.last_msg
-            res = {'success': 0, 'error_msg': 'See the console.'}
-            return Response(json.dumps(res), mimetype='application/json')
+    elif login_result == 3:
+        res = {'success': 3, 'error_msg': '请输入邮箱验证码'}
+        pushCommand = '请输入邮箱验证码'
+        return Response(json.dumps(res), mimetype='application/json')
+    else:
+        pushCommand = utils.last_msg
+        res = {'success': 0, 'error_msg': 'See the console.'}
+        return Response(json.dumps(res), mimetype='application/json')
 
 @app.route('/logout', methods=['GET'])
 def logout():

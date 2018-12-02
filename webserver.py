@@ -107,11 +107,8 @@ def disk():
     elif request.method == 'POST':
         request_file = request.form['file'].encode('utf-8')
 
-        # 检测是否已经拉取过file_list
-        try:
-            result = bdce.file_list[request_file]
-        except Exception:
-            result = bdce.get_list(request_file)
+
+        result = bdce.get_list(request_file)
 
         if result != False:
             # 分析json

@@ -6,8 +6,10 @@
 本项目百度云引擎原理根据：[BaiduPCS](https://github.com/GangZhuo/BaiduPCS)改写而来，原项目使用C语言编写，人生苦短，我用python。  
 部分关键技术参考了：[baidupcsapi](https://github.com/ly0/baidupcsapi)
 此外直链功能为抓包后提取的链接，因此是模拟百度网盘客户端的通信制作的  
-目前开发中，优先支持运行环境：python2.7/3.6 + Mac OS 10.12（开发环境）  
+目前开发中，优先支持运行环境：python3.6 + Mac OS 10.14（开发环境）
 目前仅测试了Mac OS下的情况，Windows问题将会在开发完成后解决  
+（2018-12-02更新）
+今后将不再进行python2.7的再次测试，如果python2.7产生兼容性问题，请提交issue，我会尽快修复
 
 # 更新记录
 [点击此处](https://github.com/yp05327/BaiduCloudHelper/blob/master/update.md)
